@@ -2,6 +2,12 @@
 
 Eventify is the cumulative Backend Track project evolved into a production-oriented event platform: strict TypeScript, Express 5 + Zod 4, PostgreSQL/Prisma, secure authentication, Redis cache/rate limits, BullMQ background jobs, a React/Vite PWA, operational health checks, request correlation, metrics, and automated security gates.
 
+**Live web app:** [eventify-web.onrender.com](https://eventify-web.onrender.com)  
+**Live API:** [backend2-api.onrender.com](https://backend2-api.onrender.com)  
+**API health:** [`/health`](https://backend2-api.onrender.com/health)
+
+> Free Render services can take a short moment to wake after inactivity.
+
 ## Architecture
 
 `route → controller → service → repository/data source`
