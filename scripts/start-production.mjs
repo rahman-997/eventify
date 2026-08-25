@@ -50,17 +50,47 @@ if (!migrated) {
 }
 
 console.log("[startup] Migrations ready; starting Eventify API");
-const server = spawn(process.execPath, ["dist/server.js"], {
-  stdio: "inherit",
-  env: process.env,
-  shell: false,
-});
+const children = [];
+let shuttingDown = false;
 
-for (const signal of ["SIGTERM", "SIGINT"]) {
-  process.on(signal, () => server.kill(signal));
+function startProcess(name, args, env = process.env) {
+  const child = spawn(process.execPath, args, {
+    stdio: "inherit",
+    env,
+    shell: false,
+  });
+  children.push({ name, child });
+  return child;
 }
 
-server.on("exit", (code, signal) => {
-  if (signal) process.kill(process.pid, signal);
-  else process.exit(code ?? 1);
-});
+startProcess("api", ["dist/server.js"]);
+
+if (["1", "true", "yes"].includes(String(process.env.RUN_WORKER_IN_WEB_SERVICE ?? "").toLowerCase())) {
+  console.log("[startup] Free-hosting mode enabled; starting the BullMQ worker beside the API");
+  startProcess("worker", ["dist/jobs/worker.js"], {
+    ...process.env,
+    WORKER_PORT: process.env.WORKER_PORT ?? "3001",
+  });
+}
+
+function shutdown(signal, exitCode = 0) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[startup] ${signal} received; stopping ${children.length} process(es)`);
+  for (const { child } of children) child.kill("SIGTERM");
+  const timer = setTimeout(() => process.exit(exitCode || 1), 10_000);
+  timer.unref();
+}
+
+for (const signal of ["SIGTERM", "SIGINT"]) {
+  process.on(signal, () => shutdown(signal));
+}
+
+for (const { name, child } of children) {
+  child.on("exit", (code, signal) => {
+    if (shuttingDown) return;
+    console.error(`[startup] ${name} exited unexpectedly: code=${code ?? "null"} signal=${signal ?? "none"}`);
+    shutdown(`${name}_EXIT`, code ?? 1);
+    process.exitCode = code ?? 1;
+  });
+}
