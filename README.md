@@ -83,11 +83,12 @@ The production web server sends long-lived immutable caching for hashed Vite ass
 ## Verification
 
 ```bash
+npm run verify:static
 npm run verify
 npm audit --audit-level=high
 cd web && npm run verify && npm audit --audit-level=high
 ```
 
-`npm run verify` includes Prisma generation, strict type checking, Vitest integration tests, the production build, and dependency-cruiser architecture rules. The web verification additionally enforces bundle budgets and the PWA artifact contract. CI validates Prisma migrations, boots the BullMQ worker and probes `/health`, `/ready`, and `/metrics`, runs dependency audits, Semgrep CE, and CodeQL.
+`npm run verify:static` is the service-free local quality gate: it runs strict API type checking, dependency-cruiser architecture rules, and the complete web build, bundle-budget, and PWA checks. `npm run verify` is the full backend gate and additionally requires the configured PostgreSQL and Redis services for Prisma generation, Vitest integration tests, and the production build. CI validates Prisma migrations, boots the BullMQ worker and probes `/health`, `/ready`, and `/metrics`, runs dependency audits, Semgrep CE, and CodeQL.
 
 See `CHANGELOG.md`, `AGENTS.md`, `tasks/todo.md`, `docs/security-triage.md`, and the `labs/` directory for release and course-specific implementation artifacts.

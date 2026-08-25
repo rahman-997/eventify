@@ -15,6 +15,7 @@
     "test": "vitest run",
     "arch": "depcruise --config .dependency-cruiser.cjs --exclude '^src/generated' src",
     "verify": "npm run prisma:generate && npm run typecheck && npm test && npm run build && npm run arch",
+    "verify:static": "node scripts/verify-static.mjs",
     "prisma:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
