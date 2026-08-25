@@ -167,7 +167,7 @@ heartbeatTimer.unref();
 const maintenanceTimer = setInterval(() => void maintenance(), 60 * 60 * 1_000);
 maintenanceTimer.unref();
 
-const port = Number(process.env.PORT ?? 3001);
+const port = Number(process.env.WORKER_PORT ?? process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "0.0.0.0";
 const healthServer = http.createServer(async (req, res) => {
   res.setHeader("cache-control", "no-store");
