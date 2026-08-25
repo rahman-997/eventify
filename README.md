@@ -28,6 +28,11 @@ npm run build
 npm run worker
 ```
 
+For a zero-cost portfolio deployment, set `RUN_WORKER_IN_WEB_SERVICE=true`.
+The production launcher then runs the API and BullMQ worker together while the
+API remains the only public listener. Dedicated worker services remain the
+recommended topology for higher-traffic production environments.
+
 Frontend:
 
 ```bash
