@@ -46,6 +46,7 @@ jobs:
       AUTH_RATE_LIMIT_MAX: 10000
       EMAIL_MODE: log
       METRICS_ENABLED: "true"
+      SEED_TEST_PASSWORD: eventify-ci-fixture-auth-v1
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
