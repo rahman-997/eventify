@@ -7,12 +7,13 @@ const eventId = "00000000-0000-4000-8000-000000000901";
 const organizerId = "00000000-0000-4000-8000-000000000001";
 const attendeeId = "00000000-0000-4000-8000-000000000002";
 const secondAttendeeId = "00000000-0000-4001-8000-000000000001";
+const seedTestPassword = process.env.SEED_TEST_PASSWORD ?? "";
 let organizerToken = "";
 
 beforeAll(async () => {
   const login = await request(app)
     .post("/v1/auth/login")
-    .send({ email: "organizer1@eventify.test", password: "Password123!" });
+    .send({ email: "organizer1@eventify.test", password: seedTestPassword });
   organizerToken = login.body.accessToken;
 
   await prisma.booking.deleteMany({ where: { eventId } });
