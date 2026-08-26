@@ -2,13 +2,14 @@ import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
 
+const seedTestPassword = process.env.SEED_TEST_PASSWORD ?? "";
 let attendeeToken = "";
 let organizerToken = "";
 
 beforeAll(async () => {
   const [attendee, organizer] = await Promise.all([
-    request(app).post("/v1/auth/login").send({ email: "attendee@eventify.test", password: "Password123!" }),
-    request(app).post("/v1/auth/login").send({ email: "organizer1@eventify.test", password: "Password123!" }),
+    request(app).post("/v1/auth/login").send({ email: "attendee@eventify.test", password: seedTestPassword }),
+    request(app).post("/v1/auth/login").send({ email: "organizer1@eventify.test", password: seedTestPassword }),
   ]);
   attendeeToken = attendee.body.accessToken;
   organizerToken = organizer.body.accessToken;
