@@ -49,6 +49,20 @@ if (!migrated) {
   process.exit(1);
 }
 
+const shouldSeedDemoData = ["1", "true", "yes"].includes(
+  String(process.env.SEED_DEMO_DATA_ON_START ?? "").toLowerCase(),
+);
+
+if (shouldSeedDemoData) {
+  console.log("[startup] SEED_DEMO_DATA_ON_START enabled; applying idempotent demo seed");
+  const seedResult = await run(process.execPath, [PRISMA_CLI, "db", "seed"]);
+  if (seedResult.code !== 0) {
+    console.error("[startup] Demo seed failed; refusing to start with a partially prepared demo dataset");
+    process.exit(seedResult.code ?? 1);
+  }
+  console.log("[startup] Demo seed completed successfully");
+}
+
 console.log("[startup] Migrations ready; starting Eventify API");
 const children = [];
 let shuttingDown = false;
