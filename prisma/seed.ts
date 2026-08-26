@@ -3,8 +3,9 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import { config } from "../src/config.js";
 import { hashPassword } from "../src/auth/password.js";
+import { normalizePostgresConnectionString } from "../src/db/connection-url.js";
 
-const adapter = new PrismaPg({ connectionString: config.DATABASE_URL });
+const adapter = new PrismaPg({ connectionString: normalizePostgresConnectionString(config.DATABASE_URL) });
 const prisma = new PrismaClient({ adapter });
 
 const ids = {
