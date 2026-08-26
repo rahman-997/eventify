@@ -15,10 +15,21 @@ const ids = {
   parallelEvent: "00000000-0000-4000-8000-000000000100",
 };
 
+function seededPassword(): string {
+  if (process.env.NODE_ENV === "test") {
+    const testPassword = process.env.SEED_TEST_PASSWORD;
+    if (!testPassword) {
+      throw new Error("SEED_TEST_PASSWORD is required when seeding test fixtures");
+    }
+    return testPassword;
+  }
+
+  // Non-test environments must never derive seeded credentials from public source.
+  return randomBytes(32).toString("base64url");
+}
+
 async function upsertUser(id: string, email: string, name: string, role: "ATTENDEE" | "ORGANIZER" | "ADMIN") {
-  // Seeded identities exist only to support realistic portfolio/demo data. Their
-  // credentials must never be predictable from the public source repository.
-  const passwordHash = await hashPassword(randomBytes(32).toString("base64url"));
+  const passwordHash = await hashPassword(seededPassword());
   return prisma.user.upsert({
     where: { email },
     update: { name, role, passwordHash },
