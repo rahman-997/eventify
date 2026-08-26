@@ -3,6 +3,8 @@
 [![CI](https://github.com/rahman-997/eventify/actions/workflows/ci.yml/badge.svg)](https://github.com/rahman-997/eventify/actions/workflows/ci.yml)
 [![Security](https://github.com/rahman-997/eventify/actions/workflows/security.yml/badge.svg)](https://github.com/rahman-997/eventify/actions/workflows/security.yml)
 
+![Eventify product preview](https://raw.githubusercontent.com/rahman-997/portfolio/main/public/projects/eventify-cover.jpg)
+
 Eventify is the cumulative Backend Track project evolved into a production-oriented event platform: strict TypeScript, Express 5 + Zod 4, PostgreSQL/Prisma, secure authentication, Redis cache/rate limits, BullMQ background jobs, a React/Vite PWA, operational health checks, request correlation, metrics, and automated security gates.
 
 **Live web app:** [eventify-web.onrender.com](https://eventify-web.onrender.com)  
