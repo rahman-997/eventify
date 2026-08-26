@@ -1,10 +1,14 @@
 # Eventify 1.0
 
+[![CI](https://github.com/rahman-997/eventify/actions/workflows/ci.yml/badge.svg)](https://github.com/rahman-997/eventify/actions/workflows/ci.yml)
+[![Security](https://github.com/rahman-997/eventify/actions/workflows/security.yml/badge.svg)](https://github.com/rahman-997/eventify/actions/workflows/security.yml)
+
 Eventify is the cumulative Backend Track project evolved into a production-oriented event platform: strict TypeScript, Express 5 + Zod 4, PostgreSQL/Prisma, secure authentication, Redis cache/rate limits, BullMQ background jobs, a React/Vite PWA, operational health checks, request correlation, metrics, and automated security gates.
 
 **Live web app:** [eventify-web.onrender.com](https://eventify-web.onrender.com)  
 **Live API:** [backend2-api.onrender.com](https://backend2-api.onrender.com)  
-**API health:** [`/health`](https://backend2-api.onrender.com/health)
+**API health:** [`/health`](https://backend2-api.onrender.com/health)  
+**Portfolio case study:** [Eventify engineering case study](https://abdulrahman-hajjar-dev.netlify.app/work/eventify/)
 
 > Free Render services can take a short moment to wake after inactivity.
 
