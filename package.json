@@ -1,6 +1,7 @@
 {
   "name": "eventify",
   "version": "1.0.0",
+  "description": "A production-oriented event platform with secure booking, waitlists, background jobs, caching, observability, and a React PWA.",
   "private": true,
   "type": "module",
   "engines": {
@@ -56,5 +57,22 @@
   },
   "overrides": {
     "deepmerge-ts": "8.0.1"
-  }
+  },
+  "author": "Abdulrahman Hajjar",
+  "homepage": "https://eventify-web.onrender.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rahman-997/eventify.git"
+  },
+  "keywords": [
+    "react",
+    "typescript",
+    "express",
+    "postgresql",
+    "prisma",
+    "redis",
+    "bullmq",
+    "pwa",
+    "event-platform"
+  ]
 }
