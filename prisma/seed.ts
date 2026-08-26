@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import { config } from "../src/config.js";
@@ -5,7 +6,6 @@ import { hashPassword } from "../src/auth/password.js";
 
 const adapter = new PrismaPg({ connectionString: config.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
-const PASSWORD = "Password123!";
 
 const ids = {
   organizer1: "00000000-0000-4000-8000-000000000001",
@@ -16,7 +16,9 @@ const ids = {
 };
 
 async function upsertUser(id: string, email: string, name: string, role: "ATTENDEE" | "ORGANIZER" | "ADMIN") {
-  const passwordHash = await hashPassword(PASSWORD);
+  // Seeded identities exist only to support realistic portfolio/demo data. Their
+  // credentials must never be predictable from the public source repository.
+  const passwordHash = await hashPassword(randomBytes(32).toString("base64url"));
   return prisma.user.upsert({
     where: { email },
     update: { name, role, passwordHash },
