@@ -5,13 +5,19 @@ import { hashRefreshToken } from "../src/auth/tokens.js";
 import { prisma } from "../src/db/prisma.js";
 import { redis } from "../src/redis/client.js";
 
+const seedTestPassword = process.env.SEED_TEST_PASSWORD ?? "";
 let organizerToken = "";
 
 beforeAll(async () => {
+  if (!seedTestPassword) {
+    throw new Error("SEED_TEST_PASSWORD is required for seeded integration fixtures");
+  }
+
   const organizer = await request(app).post("/v1/auth/login").send({
     email: "organizer1@eventify.test",
-    password: "Password123!",
+    password: seedTestPassword,
   });
+  expect(organizer.status).toBe(200);
   organizerToken = organizer.body.accessToken;
 });
 
@@ -94,9 +100,13 @@ describe("Sessions 4–5 production behaviors", () => {
     const eventId = "00000000-0000-4000-8000-000000000100";
     const logins = await Promise.all(
       Array.from({ length: 6 }, (_, index) =>
-        request(app).post("/v1/auth/login").send({ email: `parallel${index + 1}@eventify.test`, password: "Password123!" }),
+        request(app)
+          .post("/v1/auth/login")
+          .send({ email: `parallel${index + 1}@eventify.test`, password: seedTestPassword }),
       ),
     );
+    expect(logins.every((login) => login.status === 200)).toBe(true);
+
     const responses = await Promise.all(
       logins.map((login) =>
         request(app).post("/v1/bookings").set("authorization", `Bearer ${login.body.accessToken}`).send({ eventId }),
