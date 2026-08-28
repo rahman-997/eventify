@@ -7,7 +7,7 @@
 
 **A production-oriented event platform built to exercise reliable full-stack system design, not just CRUD.** Eventify combines a React/Vite PWA with an Express 5 + TypeScript API, PostgreSQL/Prisma persistence, Redis-backed caching and rate limits, BullMQ background jobs, durable outbox workflows, operational health checks, metrics, structured logs, and automated security gates.
 
-**Web:** [eventify-web.onrender.com](https://eventify-web.onrender.com) · **API:** [backend2-api.onrender.com](https://backend2-api.onrender.com) · **Health:** [/health](https://backend2-api.onrender.com/health) · **Case study:** [Portfolio](https://abdulrahman-hajjar-dev.netlify.app/work/eventify/) · **Engineer:** [Abdulrahman Hajar](https://github.com/rahman-997)
+**Web:** [eventify-web.onrender.com](https://eventify-web.onrender.com) · **API:** [backend2-api.onrender.com](https://backend2-api.onrender.com) · **Health:** [/health](https://backend2-api.onrender.com/health) · **Case study:** [Portfolio](https://abdulrahman-hajar-dev.netlify.app/work/eventify/) · **Engineer:** [Abdulrahman Hajar](https://github.com/rahman-997)
 
 > Free Render services can require a short wake-up after inactivity.
 
