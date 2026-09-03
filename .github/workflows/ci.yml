@@ -104,9 +104,16 @@ jobs:
         working-directory: web
         run: npm run verify
 
-      - name: Dependency audit
-        run: npm audit --audit-level=high
+      - name: API runtime dependency audit
+        run: npm audit --omit=dev --audit-level=high
 
-      - name: Frontend dependency audit
+      - name: API full-tree critical audit
+        run: npm audit --audit-level=critical
+
+      - name: Frontend runtime dependency audit
         working-directory: web
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Frontend full-tree critical audit
+        working-directory: web
+        run: npm audit --audit-level=critical
