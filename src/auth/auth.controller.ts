@@ -1,15 +1,17 @@
 import type { RequestHandler, Response } from "express";
+import { config } from "../config.js";
 import type { AuthUser } from "./tokens.js";
 import * as authService from "./auth.service.js";
 
 const COOKIE_NAME = "refresh_token";
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 const COOKIE_PATH = "/v1/auth";
+const COOKIE_SECURE = config.NODE_ENV === "production";
 
 function setRefreshCookie(res: Response, token: string) {
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: true,
+    secure: COOKIE_SECURE,
     sameSite: "strict",
     path: COOKIE_PATH,
     maxAge: COOKIE_MAX_AGE,
@@ -19,7 +21,7 @@ function setRefreshCookie(res: Response, token: string) {
 function clearRefreshCookie(res: Response) {
   res.clearCookie(COOKIE_NAME, {
     httpOnly: true,
-    secure: true,
+    secure: COOKIE_SECURE,
     sameSite: "strict",
     path: COOKIE_PATH,
   });
