@@ -30,6 +30,9 @@ if (manifest.display !== "standalone") failures.push("manifest display must be s
 if (manifest.start_url !== "/" || manifest.scope !== "/") failures.push("manifest start_url and scope must remain root-scoped");
 if (!Array.isArray(manifest.icons) || manifest.icons.length === 0) failures.push("manifest must include an install icon");
 if (!worker.includes('url.pathname.startsWith("/api/")')) failures.push("service worker must never cache API traffic");
+if (!worker.includes('request.headers.has("range")')) failures.push("service worker must bypass Range requests");
+if (!worker.includes("MAX_STATIC_CACHE_ENTRIES")) failures.push("service worker must bound runtime static-cache growth");
+if (!worker.includes("trimCache")) failures.push("service worker must prune old runtime cache entries");
 if (!worker.includes("networkFirstNavigation")) failures.push("service worker must use network-first navigation");
 if (!worker.includes("precacheAppShell")) failures.push("service worker must precache the built app shell");
 
