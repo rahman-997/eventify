@@ -209,10 +209,10 @@ const healthServer = http.createServer(async (req, res) => {
 healthServer.listen(port, host, () => logger.info("worker.started", { component: "worker", host, port, queue: QUEUE_NAME }));
 
 let stopping = false;
-async function shutdown(signal: string) {
+async function shutdown(signal: string, exitCode = 0) {
   if (stopping) return;
   stopping = true;
-  logger.info("worker.shutdown_started", { component: "worker", signal });
+  logger.info("worker.shutdown_started", { component: "worker", signal, exitCode });
   if (pollTimer) clearTimeout(pollTimer);
   clearInterval(heartbeatTimer);
   clearInterval(maintenanceTimer);
@@ -228,16 +228,16 @@ async function shutdown(signal: string) {
   await queue.close();
   await Promise.allSettled([producerConnection.quit(), workerConnection.quit(), prisma.$disconnect()]);
   clearTimeout(timeout);
-  logger.info("worker.shutdown_complete", { component: "worker", signal });
-  process.exit(0);
+  logger.info("worker.shutdown_complete", { component: "worker", signal, exitCode });
+  process.exit(exitCode);
 }
 process.on("SIGTERM", () => void shutdown("SIGTERM"));
 process.on("SIGINT", () => void shutdown("SIGINT"));
 process.on("unhandledRejection", (reason) => {
   logger.error("worker.unhandled_rejection", { component: "worker", reason });
-  void shutdown("unhandledRejection");
+  void shutdown("unhandledRejection", 1);
 });
 process.on("uncaughtException", (error) => {
   logger.error("worker.uncaught_exception", { component: "worker", error });
-  void shutdown("uncaughtException");
+  void shutdown("uncaughtException", 1);
 });
