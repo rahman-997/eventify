@@ -1,9 +1,12 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { app } from "../src/app.js";
+import { createBooking } from "../src/bookings/bookings.service.js";
 import { prisma } from "../src/db/prisma.js";
+import { updateEvent } from "../src/events/events.service.js";
+import { app } from "../src/app.js";
 
 const eventId = "00000000-0000-4000-8000-000000000901";
+const concurrencyEventId = "00000000-0000-4000-8000-000000000902";
 const organizerId = "00000000-0000-4000-8000-000000000001";
 const attendeeId = "00000000-0000-4000-8000-000000000002";
 const secondAttendeeId = "00000000-0000-4001-8000-000000000001";
@@ -16,8 +19,8 @@ beforeAll(async () => {
     .send({ email: "organizer1@eventify.test", password: seedTestPassword });
   organizerToken = login.body.accessToken;
 
-  await prisma.booking.deleteMany({ where: { eventId } });
-  await prisma.event.deleteMany({ where: { id: eventId } });
+  await prisma.booking.deleteMany({ where: { eventId: { in: [eventId, concurrencyEventId] } } });
+  await prisma.event.deleteMany({ where: { id: { in: [eventId, concurrencyEventId] } } });
   await prisma.event.create({
     data: {
       id: eventId,
@@ -39,8 +42,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await prisma.booking.deleteMany({ where: { eventId } });
-  await prisma.event.deleteMany({ where: { id: eventId } });
+  await prisma.booking.deleteMany({ where: { eventId: { in: [eventId, concurrencyEventId] } } });
+  await prisma.event.deleteMany({ where: { id: { in: [eventId, concurrencyEventId] } } });
 });
 
 describe("event lifecycle invariants", () => {
@@ -52,6 +55,35 @@ describe("event lifecycle invariants", () => {
 
     expect(response.status).toBe(409);
     expect(response.body.error).toContain("confirmed bookings");
+  });
+
+  it("keeps confirmed bookings within capacity during a concurrent capacity reduction", async () => {
+    await prisma.event.create({
+      data: {
+        id: concurrencyEventId,
+        title: "Concurrent Capacity Event",
+        description: "Exercise booking and capacity serialization",
+        venue: "Invariant Hall",
+        startsAt: new Date(Date.now() + 86_400_000),
+        capacity: 2,
+        priceCents: 1000,
+        organizerId,
+      },
+    });
+    await prisma.booking.create({
+      data: { userId: attendeeId, eventId: concurrencyEventId, status: "CONFIRMED" },
+    });
+
+    await Promise.allSettled([
+      updateEvent(concurrencyEventId, { capacity: 1 }, { sub: organizerId, role: "ORGANIZER" }),
+      createBooking({ sub: secondAttendeeId, role: "ATTENDEE" }, concurrencyEventId),
+    ]);
+
+    const [event, confirmed] = await Promise.all([
+      prisma.event.findUniqueOrThrow({ where: { id: concurrencyEventId } }),
+      prisma.booking.count({ where: { eventId: concurrencyEventId, status: "CONFIRMED" } }),
+    ]);
+    expect(confirmed).toBeLessThanOrEqual(event.capacity);
   });
 
   it("refuses destructive deletion while active bookings exist", async () => {
