@@ -1,4 +1,5 @@
 import { prisma } from "../db/prisma.js";
+import { withSerializationRetry } from "../db/serialization.js";
 import { HttpError } from "../errors/http-error.js";
 import { authRepository } from "./auth.repository.js";
 import { clearLoginFailures, assertLoginAllowed, recordLoginFailure } from "./login-throttle.js";
@@ -98,36 +99,38 @@ export async function refresh(rawToken: string | undefined) {
   const oldHash = hashRefreshToken(rawToken);
   const next = createRefreshToken();
 
-  const result = await prisma.$transaction(
-    async (transactionClient) => {
-      const tx = transactionClient as unknown as typeof prisma;
-      const current = await tx.refreshToken.findUnique({
-        where: { tokenHash: oldHash },
-        include: { user: true },
-      });
-      if (!current || current.expiresAt <= new Date()) return { ok: false as const };
+  const result = await withSerializationRetry(() =>
+    prisma.$transaction(
+      async (transactionClient) => {
+        const tx = transactionClient as unknown as typeof prisma;
+        const current = await tx.refreshToken.findUnique({
+          where: { tokenHash: oldHash },
+          include: { user: true },
+        });
+        if (!current || current.expiresAt <= new Date()) return { ok: false as const };
 
-      if (current.revokedAt) {
-        await revokeReplacementChain(tx, current.replacedById);
-        return { ok: false as const };
-      }
+        if (current.revokedAt) {
+          await revokeReplacementChain(tx, current.replacedById);
+          return { ok: false as const };
+        }
 
-      const replacement = await tx.refreshToken.create({
-        data: {
-          tokenHash: next.hash,
-          userId: current.userId,
-          expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
-        },
-      });
+        const replacement = await tx.refreshToken.create({
+          data: {
+            tokenHash: next.hash,
+            userId: current.userId,
+            expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
+          },
+        });
 
-      await tx.refreshToken.update({
-        where: { id: current.id },
-        data: { revokedAt: new Date(), replacedById: replacement.id },
-      });
+        await tx.refreshToken.update({
+          where: { id: current.id },
+          data: { revokedAt: new Date(), replacedById: replacement.id },
+        });
 
-      return { ok: true as const, user: current.user };
-    },
-    { isolationLevel: "Serializable" },
+        return { ok: true as const, user: current.user };
+      },
+      { isolationLevel: "Serializable" },
+    ),
   );
 
   if (!result.ok) throw new HttpError(401, "Invalid refresh token");
