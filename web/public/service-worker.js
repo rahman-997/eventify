@@ -1,6 +1,14 @@
 const SHELL_CACHE = "eventify-shell-v1";
 const STATIC_CACHE = "eventify-static-v1";
+const MAX_STATIC_CACHE_ENTRIES = 80;
 const SHELL_URLS = ["/offline.html", "/manifest.webmanifest", "/icon.svg", "/pwa-install.js", "/pwa-install.css"];
+
+async function trimCache(cache, maxEntries) {
+  const keys = await cache.keys();
+  const overflow = keys.length - maxEntries;
+  if (overflow <= 0) return;
+  await Promise.all(keys.slice(0, overflow).map((request) => cache.delete(request)));
+}
 
 async function precacheAppShell() {
   const shellCache = await caches.open(SHELL_CACHE);
@@ -15,6 +23,7 @@ async function precacheAppShell() {
   const uniqueAssets = [...new Set(assetUrls)];
   const staticCache = await caches.open(STATIC_CACHE);
   await Promise.all(uniqueAssets.map((url) => staticCache.add(url)));
+  await trimCache(staticCache, MAX_STATIC_CACHE_ENTRIES);
 }
 
 self.addEventListener("install", (event) => {
@@ -49,6 +58,7 @@ async function cacheFirstStatic(request) {
   if (response.ok) {
     const cache = await caches.open(STATIC_CACHE);
     await cache.put(request, response.clone());
+    await trimCache(cache, MAX_STATIC_CACHE_ENTRIES);
   }
   return response;
 }
@@ -56,6 +66,7 @@ async function cacheFirstStatic(request) {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
+  if (request.headers.has("range")) return;
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
