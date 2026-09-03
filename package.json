@@ -56,7 +56,8 @@
     "vitest": "^3.2.4"
   },
   "overrides": {
-    "deepmerge-ts": "8.0.1"
+    "deepmerge-ts": "8.0.1",
+    "mysql2": "3.24.3"
   },
   "author": "Abdulrahman Hajar",
   "homepage": "https://eventify-web.onrender.com",
