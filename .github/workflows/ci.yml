@@ -105,16 +105,37 @@ jobs:
         working-directory: web
         run: npm run verify
 
-      - name: API runtime dependency audit
-        run: npm audit --omit=dev --audit-level=high
+      - name: Dependency audits
+        shell: bash
+        run: |
+          set -euo pipefail
 
-      - name: API full-tree critical audit
-        run: npm audit --audit-level=critical
+          run_audit() {
+            local label="$1"
+            local directory="$2"
+            shift 2
 
-      - name: Frontend runtime dependency audit
-        working-directory: web
-        run: npm audit --omit=dev --audit-level=high
+            echo "::group::$label"
+            set +e
+            audit_output="$(cd "$directory" && timeout 120s "$@" 2>&1)"
+            audit_status=$?
+            set -e
+            printf '%s\n' "$audit_output"
+            echo '::endgroup::'
 
-      - name: Frontend full-tree critical audit
-        working-directory: web
-        run: npm audit --audit-level=critical
+            if [ "$audit_status" -eq 0 ]; then
+              return 0
+            fi
+
+            if [ "$audit_status" -eq 124 ] || printf '%s\n' "$audit_output" | grep -Eq 'Service Unavailable|audit endpoint returned an error|ECONNRESET|ETIMEDOUT|EAI_AGAIN'; then
+              echo "::warning::$label could not reach the npm audit service; CodeQL, Semgrep and Dependabot remain active, so CI will not fail on this external outage."
+              return 0
+            fi
+
+            return "$audit_status"
+          }
+
+          run_audit 'API runtime dependency audit' . npm audit --omit=dev --audit-level=high
+          run_audit 'API full-tree critical audit' . npm audit --audit-level=critical
+          run_audit 'Frontend runtime dependency audit' web npm audit --omit=dev --audit-level=high
+          run_audit 'Frontend full-tree critical audit' web npm audit --audit-level=critical
