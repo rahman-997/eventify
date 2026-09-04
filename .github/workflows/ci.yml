@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: eventify-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -105,36 +109,87 @@ jobs:
         working-directory: web
         run: npm run verify
 
-      - name: API runtime dependency audit
+      - name: Dependency audits
+        shell: bash
         run: |
-          npm audit --omit=dev --audit-level=high || {
-            echo "Initial API runtime audit failed; retrying once in case the npm registry is transiently unavailable."
-            sleep 20
-            npm audit --omit=dev --audit-level=high
+          set -euo pipefail
+
+          audit_dir="$(mktemp -d)"
+          trap 'rm -rf "$audit_dir"' EXIT
+
+          start_audit() {
+            local key="$1"
+            local directory="$2"
+            shift 2
+
+            (
+              set +e
+              cd "$directory"
+              timeout 120s "$@" > "$audit_dir/$key.out" 2>&1
+              printf '%s\n' "$?" > "$audit_dir/$key.status"
+            ) &
           }
 
-      - name: API full-tree critical audit
-        run: |
-          npm audit --audit-level=critical || {
-            echo "Initial API critical audit failed; retrying once in case the npm registry is transiently unavailable."
-            sleep 20
-            npm audit --audit-level=critical
+          check_audit() {
+            local key="$1"
+            local label="$2"
+            local directory="$3"
+            shift 3
+            local audit_status
+            local audit_output
+            local retry_status
+            local retry_output
+
+            audit_status="$(cat "$audit_dir/$key.status")"
+            audit_output="$(cat "$audit_dir/$key.out")"
+
+            echo "::group::$label"
+            printf '%s\n' "$audit_output"
+            echo '::endgroup::'
+
+            if [ "$audit_status" -eq 0 ]; then
+              return 0
+            fi
+
+            if [ "$audit_status" -eq 124 ] || printf '%s\n' "$audit_output" | grep -Eq 'Service Unavailable|audit endpoint returned an error|ECONNRESET|ETIMEDOUT|EAI_AGAIN'; then
+              echo "::warning::$label could not reach the npm audit service; retrying once after 20 seconds."
+              sleep 20
+
+              set +e
+              (
+                cd "$directory"
+                timeout 120s "$@"
+              ) > "$audit_dir/$key.retry.out" 2>&1
+              retry_status="$?"
+              set -e
+              retry_output="$(cat "$audit_dir/$key.retry.out")"
+
+              echo "::group::$label retry"
+              printf '%s\n' "$retry_output"
+              echo '::endgroup::'
+
+              if [ "$retry_status" -eq 0 ]; then
+                return 0
+              fi
+
+              if [ "$retry_status" -eq 124 ] || printf '%s\n' "$retry_output" | grep -Eq 'Service Unavailable|audit endpoint returned an error|ECONNRESET|ETIMEDOUT|EAI_AGAIN'; then
+                echo "::error::$label could not reach the npm audit service after one retry."
+              fi
+              return "$retry_status"
+            fi
+
+            return "$audit_status"
           }
 
-      - name: Frontend runtime dependency audit
-        working-directory: web
-        run: |
-          npm audit --omit=dev --audit-level=high || {
-            echo "Initial frontend runtime audit failed; retrying once in case the npm registry is transiently unavailable."
-            sleep 20
-            npm audit --omit=dev --audit-level=high
-          }
+          start_audit api-runtime . npm audit --omit=dev --audit-level=high
+          start_audit api-critical . npm audit --audit-level=critical
+          start_audit web-runtime web npm audit --omit=dev --audit-level=high
+          start_audit web-critical web npm audit --audit-level=critical
+          wait
 
-      - name: Frontend full-tree critical audit
-        working-directory: web
-        run: |
-          npm audit --audit-level=critical || {
-            echo "Initial frontend critical audit failed; retrying once in case the npm registry is transiently unavailable."
-            sleep 20
-            npm audit --audit-level=critical
-          }
+          audit_failed=0
+          check_audit api-runtime 'API runtime dependency audit' . npm audit --omit=dev --audit-level=high || audit_failed=1
+          check_audit api-critical 'API full-tree critical audit' . npm audit --audit-level=critical || audit_failed=1
+          check_audit web-runtime 'Frontend runtime dependency audit' web npm audit --omit=dev --audit-level=high || audit_failed=1
+          check_audit web-critical 'Frontend full-tree critical audit' web npm audit --audit-level=critical || audit_failed=1
+          exit "$audit_failed"
