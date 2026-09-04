@@ -106,15 +106,35 @@ jobs:
         run: npm run verify
 
       - name: API runtime dependency audit
-        run: npm audit --omit=dev --audit-level=high
+        run: |
+          npm audit --omit=dev --audit-level=high || {
+            echo "Initial API runtime audit failed; retrying once in case the npm registry is transiently unavailable."
+            sleep 20
+            npm audit --omit=dev --audit-level=high
+          }
 
       - name: API full-tree critical audit
-        run: npm audit --audit-level=critical
+        run: |
+          npm audit --audit-level=critical || {
+            echo "Initial API critical audit failed; retrying once in case the npm registry is transiently unavailable."
+            sleep 20
+            npm audit --audit-level=critical
+          }
 
       - name: Frontend runtime dependency audit
         working-directory: web
-        run: npm audit --omit=dev --audit-level=high
+        run: |
+          npm audit --omit=dev --audit-level=high || {
+            echo "Initial frontend runtime audit failed; retrying once in case the npm registry is transiently unavailable."
+            sleep 20
+            npm audit --omit=dev --audit-level=high
+          }
 
       - name: Frontend full-tree critical audit
         working-directory: web
-        run: npm audit --audit-level=critical
+        run: |
+          npm audit --audit-level=critical || {
+            echo "Initial frontend critical audit failed; retrying once in case the npm registry is transiently unavailable."
+            sleep 20
+            npm audit --audit-level=critical
+          }
