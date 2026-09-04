@@ -110,16 +110,32 @@ jobs:
         run: |
           set -euo pipefail
 
-          run_audit() {
-            local label="$1"
+          audit_dir="$(mktemp -d)"
+          trap 'rm -rf "$audit_dir"' EXIT
+
+          start_audit() {
+            local key="$1"
             local directory="$2"
             shift 2
 
+            (
+              set +e
+              cd "$directory"
+              timeout 120s "$@" > "$audit_dir/$key.out" 2>&1
+              printf '%s\n' "$?" > "$audit_dir/$key.status"
+            ) &
+          }
+
+          check_audit() {
+            local key="$1"
+            local label="$2"
+            local audit_status
+            local audit_output
+
+            audit_status="$(cat "$audit_dir/$key.status")"
+            audit_output="$(cat "$audit_dir/$key.out")"
+
             echo "::group::$label"
-            set +e
-            audit_output="$(cd "$directory" && timeout 120s "$@" 2>&1)"
-            audit_status=$?
-            set -e
             printf '%s\n' "$audit_output"
             echo '::endgroup::'
 
@@ -135,7 +151,15 @@ jobs:
             return "$audit_status"
           }
 
-          run_audit 'API runtime dependency audit' . npm audit --omit=dev --audit-level=high
-          run_audit 'API full-tree critical audit' . npm audit --audit-level=critical
-          run_audit 'Frontend runtime dependency audit' web npm audit --omit=dev --audit-level=high
-          run_audit 'Frontend full-tree critical audit' web npm audit --audit-level=critical
+          start_audit api-runtime . npm audit --omit=dev --audit-level=high
+          start_audit api-critical . npm audit --audit-level=critical
+          start_audit web-runtime web npm audit --omit=dev --audit-level=high
+          start_audit web-critical web npm audit --audit-level=critical
+          wait
+
+          audit_failed=0
+          check_audit api-runtime 'API runtime dependency audit' || audit_failed=1
+          check_audit api-critical 'API full-tree critical audit' || audit_failed=1
+          check_audit web-runtime 'Frontend runtime dependency audit' || audit_failed=1
+          check_audit web-critical 'Frontend full-tree critical audit' || audit_failed=1
+          exit "$audit_failed"
