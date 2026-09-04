@@ -133,8 +133,12 @@ jobs:
           check_audit() {
             local key="$1"
             local label="$2"
+            local directory="$3"
+            shift 3
             local audit_status
             local audit_output
+            local retry_status
+            local retry_output
 
             audit_status="$(cat "$audit_dir/$key.status")"
             audit_output="$(cat "$audit_dir/$key.out")"
@@ -148,8 +152,30 @@ jobs:
             fi
 
             if [ "$audit_status" -eq 124 ] || printf '%s\n' "$audit_output" | grep -Eq 'Service Unavailable|audit endpoint returned an error|ECONNRESET|ETIMEDOUT|EAI_AGAIN'; then
-              echo "::warning::$label could not reach the npm audit service; CodeQL, Semgrep and Dependabot remain active, so CI will not fail on this external outage."
-              return 0
+              echo "::warning::$label could not reach the npm audit service; retrying once after 20 seconds."
+              sleep 20
+
+              set +e
+              (
+                cd "$directory"
+                timeout 120s "$@"
+              ) > "$audit_dir/$key.retry.out" 2>&1
+              retry_status="$?"
+              set -e
+              retry_output="$(cat "$audit_dir/$key.retry.out")"
+
+              echo "::group::$label retry"
+              printf '%s\n' "$retry_output"
+              echo '::endgroup::'
+
+              if [ "$retry_status" -eq 0 ]; then
+                return 0
+              fi
+
+              if [ "$retry_status" -eq 124 ] || printf '%s\n' "$retry_output" | grep -Eq 'Service Unavailable|audit endpoint returned an error|ECONNRESET|ETIMEDOUT|EAI_AGAIN'; then
+                echo "::error::$label could not reach the npm audit service after one retry."
+              fi
+              return "$retry_status"
             fi
 
             return "$audit_status"
@@ -162,8 +188,8 @@ jobs:
           wait
 
           audit_failed=0
-          check_audit api-runtime 'API runtime dependency audit' || audit_failed=1
-          check_audit api-critical 'API full-tree critical audit' || audit_failed=1
-          check_audit web-runtime 'Frontend runtime dependency audit' || audit_failed=1
-          check_audit web-critical 'Frontend full-tree critical audit' || audit_failed=1
+          check_audit api-runtime 'API runtime dependency audit' . npm audit --omit=dev --audit-level=high || audit_failed=1
+          check_audit api-critical 'API full-tree critical audit' . npm audit --audit-level=critical || audit_failed=1
+          check_audit web-runtime 'Frontend runtime dependency audit' web npm audit --omit=dev --audit-level=high || audit_failed=1
+          check_audit web-critical 'Frontend full-tree critical audit' web npm audit --audit-level=critical || audit_failed=1
           exit "$audit_failed"
