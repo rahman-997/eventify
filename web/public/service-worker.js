@@ -1,7 +1,16 @@
-const SHELL_CACHE = "eventify-shell-v1";
-const STATIC_CACHE = "eventify-static-v1";
+const SHELL_CACHE = "eventify-shell-v2";
+const STATIC_CACHE = "eventify-static-v2";
 const MAX_STATIC_CACHE_ENTRIES = 80;
-const SHELL_URLS = ["/offline.html", "/manifest.webmanifest", "/icon.svg", "/pwa-install.js", "/pwa-install.css"];
+const SHELL_URLS = [
+  "/offline.html",
+  "/manifest.webmanifest",
+  "/icon.svg",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/apple-touch-icon.png",
+  "/pwa-install.js",
+  "/pwa-install.css",
+];
 
 async function trimCache(cache, maxEntries) {
   const keys = await cache.keys();
@@ -79,7 +88,16 @@ self.addEventListener("fetch", (event) => {
 
   if (
     url.pathname.startsWith("/assets/") ||
-    ["/icon.svg", "/manifest.webmanifest", "/offline.html", "/pwa-install.js", "/pwa-install.css"].includes(url.pathname)
+    [
+      "/icon.svg",
+      "/icon-192.png",
+      "/icon-512.png",
+      "/apple-touch-icon.png",
+      "/manifest.webmanifest",
+      "/offline.html",
+      "/pwa-install.js",
+      "/pwa-install.css",
+    ].includes(url.pathname)
   ) {
     event.respondWith(cacheFirstStatic(request));
   }
