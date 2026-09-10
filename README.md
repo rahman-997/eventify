@@ -132,7 +132,7 @@ The worker exposes equivalent health/readiness/metrics endpoints. Every API resp
 
 The frontend ships:
 
-- manifest and install icon
+- web app manifest with dedicated 192×192, 512×512, maskable, and Apple touch icons
 - install prompt
 - offline fallback
 - conservative service worker
@@ -170,6 +170,12 @@ npm run dev
 
 For a zero-cost portfolio deployment, `RUN_WORKER_IN_WEB_SERVICE=true` allows the production launcher to run the API and worker together while keeping the API as the only public listener. A dedicated worker service remains the better topology for higher traffic.
 
+### Demo seed safety
+
+Demo fixtures are deliberately opt-in. `SEED_DEMO_DATA_ON_START=true` is sufficient in development/test environments, but production requires **both** `SEED_DEMO_DATA_ON_START=true` and `ALLOW_PRODUCTION_DEMO_SEED=true`. Direct production execution of `prisma db seed` is also refused without the production acknowledgement. Keep both flags false for a long-lived production database.
+
+This protects real data because the course/demo seed intentionally upserts test users and events and resets selected booking fixtures.
+
 ## Verification
 
 ```bash
@@ -181,7 +187,7 @@ cd web && npm run verify && npm audit --audit-level=high
 
 `verify:static` runs service-free quality gates including strict API type checking, dependency-cruiser architecture rules, frontend build validation, bundle-budget checks, and PWA verification.
 
-`verify` adds Prisma generation, PostgreSQL/Redis-backed integration tests, and the production backend build.
+`verify` adds Prisma generation, the production demo-seed policy tests, PostgreSQL/Redis-backed integration tests, and the production backend build.
 
 CI additionally validates migrations, boots the BullMQ worker, probes operational endpoints, runs dependency audits, and executes security analysis.
 
