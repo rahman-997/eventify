@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { resolveDemoSeedPolicy } from "./demo-seed-policy.mjs";
 import { migrationRetryDelay } from "./migration-backoff.mjs";
 
 const MAX_MIGRATION_ATTEMPTS = Number(process.env.MIGRATION_MAX_ATTEMPTS ?? 6);
@@ -49,12 +50,15 @@ if (!migrated) {
   process.exit(1);
 }
 
-const shouldSeedDemoData = ["1", "true", "yes"].includes(
-  String(process.env.SEED_DEMO_DATA_ON_START ?? "").toLowerCase(),
-);
+const demoSeedPolicy = resolveDemoSeedPolicy(process.env);
+if (demoSeedPolicy.blocked) {
+  console.warn(
+    "[startup] Demo seed request ignored in production; set ALLOW_PRODUCTION_DEMO_SEED=true as a second explicit opt-in if this is intentionally a disposable demo environment",
+  );
+}
 
-if (shouldSeedDemoData) {
-  console.log("[startup] SEED_DEMO_DATA_ON_START enabled; applying idempotent demo seed");
+if (demoSeedPolicy.shouldRun) {
+  console.log("[startup] Demo seed explicitly enabled; applying idempotent demo seed");
   const seedResult = await run(process.execPath, [PRISMA_CLI, "db", "seed"]);
   if (seedResult.code !== 0) {
     console.error("[startup] Demo seed failed; refusing to start with a partially prepared demo dataset");
