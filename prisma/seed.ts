@@ -5,6 +5,14 @@ import { config } from "../src/config.js";
 import { hashPassword } from "../src/auth/password.js";
 import { normalizePostgresConnectionString } from "../src/db/connection-url.js";
 
+const truthy = new Set(["1", "true", "yes"]);
+const productionSeedAllowed = truthy.has(String(process.env.ALLOW_PRODUCTION_DEMO_SEED ?? "").trim().toLowerCase());
+if (process.env.NODE_ENV === "production" && !productionSeedAllowed) {
+  throw new Error(
+    "Refusing to seed demo fixtures in production without ALLOW_PRODUCTION_DEMO_SEED=true. This seed mutates demo users, events, and bookings.",
+  );
+}
+
 const adapter = new PrismaPg({ connectionString: normalizePostgresConnectionString(config.DATABASE_URL) });
 const prisma = new PrismaClient({ adapter });
 
