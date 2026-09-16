@@ -14,7 +14,7 @@
     "worker": "node dist/jobs/worker.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:seed-policy": "node --test scripts/demo-seed-policy.test.mjs",
+    "test:seed-policy": "node --test scripts/demo-seed-policy.node-test.mjs",
     "arch": "depcruise --config .dependency-cruiser.cjs --exclude '^src/generated' src",
     "verify": "npm run prisma:generate && npm run typecheck && npm run test:seed-policy && npm test && npm run build && npm run arch",
     "verify:static": "node scripts/verify-static.mjs",
