@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -98,6 +98,7 @@ function timeLabel(value: string) {
 }
 
 export default function AppV2() {
+  const eventsRequest = useRef<AbortController | null>(null);
   const [events, setEvents] = useState<EventPage>({ data: [], page: 1, limit: 9, total: 0 });
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
@@ -116,6 +117,8 @@ export default function AppV2() {
   const [stats, setStats] = useState<EventStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
+
+  useEffect(() => () => eventsRequest.current?.abort(), []);
 
   const canOrganize = user?.role === "ORGANIZER" || user?.role === "ADMIN";
   const pages = Math.max(1, Math.ceil(events.total / events.limit));
@@ -168,6 +171,9 @@ export default function AppV2() {
   }
 
   async function loadEvents(nextPage = page) {
+    eventsRequest.current?.abort();
+    const controller = new AbortController();
+    eventsRequest.current = controller;
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(nextPage), limit: "9" });
@@ -175,14 +181,14 @@ export default function AppV2() {
       if (venue.trim()) params.set("venue", venue.trim());
       if (from) params.set("from", new Date(`${from}T00:00:00`).toISOString());
       if (to) params.set("to", new Date(`${to}T23:59:59`).toISOString());
-      const response = await fetch(`${API}/v1/events?${params}`, { credentials: "include" });
+      const response = await fetch(`${API}/v1/events?${params}`, { credentials: "include", signal: controller.signal });
       const body = await parseResponse(response);
       if (!response.ok) throw new Error(messageFrom(body, "Could not load events"));
-      setEvents(body);
+      if (!controller.signal.aborted) setEvents(body);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Could not load events");
+      if (!controller.signal.aborted) setNotice(error instanceof Error ? error.message : "Could not load events");
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   }
 
