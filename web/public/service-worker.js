@@ -1,5 +1,5 @@
-const SHELL_CACHE = "eventify-shell-v2";
-const STATIC_CACHE = "eventify-static-v2";
+const SHELL_CACHE = "eventify-shell-v3";
+const STATIC_CACHE = "eventify-static-v3";
 const MAX_STATIC_CACHE_ENTRIES = 80;
 const SHELL_URLS = [
   "/offline.html",
@@ -42,7 +42,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== SHELL_CACHE && key !== STATIC_CACHE).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => (key.startsWith("eventify-shell-") || key.startsWith("eventify-static-")) && key !== SHELL_CACHE && key !== STATIC_CACHE).map((key) => caches.delete(key))))
       .then(() => self.clients.claim()),
   );
 });
