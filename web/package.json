@@ -10,7 +10,7 @@
     "pwa:check": "node scripts/check-pwa.mjs",
     "verify": "npm run test:pwa && npm run build && npm run bundle:check && npm run pwa:check",
     "start": "node server.mjs",
-    "test:pwa": "node --test scripts/service-worker.test.mjs"
+    "test:pwa": "node --test scripts/service-worker.node-test.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",
