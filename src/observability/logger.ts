@@ -1,6 +1,6 @@
 import { config } from "../config.js";
 import { getRequestId } from "./request-context.js";
-import { sanitizeLogValue } from "./log-sanitizer.js";
+import { sanitizeLogValue, redactLogText } from "./log-sanitizer.js";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 type LogFields = Record<string, unknown>;
@@ -12,7 +12,7 @@ export function createLogger(service: string) {
       timestamp: new Date().toISOString(),
       level,
       service,
-      message,
+      message: redactLogText(message),
       requestId: getRequestId(),
     };
 
