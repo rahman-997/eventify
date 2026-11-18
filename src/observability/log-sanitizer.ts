@@ -13,8 +13,12 @@ const normalizeKey = (key: string): string => key.toLowerCase().replace(/[^a-z0-
 /** Also redact credentials embedded in error messages/URL strings. */
 export function redactLogText(input: string): string {
   return input
-    .replace(/\b(Authorization\s*:\s*(?:Bearer|Basic)\s+)[^\s,;]+/gi,
+    // Redact full credential headers, not only Bearer/Basic tokens.
+    .replace(/\b((?:Authorization|Proxy-Authorization|Cookie|Set-Cookie)\s*:\s*)[^\r\n]+/gi,
       (_match, prefix: string) => prefix + REDACTED)
+    // Database and API exceptions often include URLs with embedded credentials.
+    .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s/@]+@/gi,
+      (_match, scheme: string) => scheme + REDACTED + '@')
     .replace(/(^|[\s?&;])((?:access[_-]?token|refresh[_-]?token|id[_-]?token|token|api[_-]?key|client[_-]?secret|password|passphrase|secret|code|session[_-]?id))=([^\s&#;]+)/gi,
       (_match, prefix: string, key: string) => prefix + key + '=' + REDACTED);
 }
