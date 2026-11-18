@@ -52,3 +52,19 @@ test('bounds cyclic graphs and nested arrays', () => {
   const output = sanitizeLogValue(cycle);
   assert.equal(output.self.self.self.self.self, '[max-depth]');
 });
+
+test('redacts database URL userinfo and sensitive HTTP header values', () => {
+  const log = 'database error postgres://service:db-password@db.internal:5432/app\nCookie: session=secret-cookie\nProxy-Authorization: Basic protected-credential';
+  const sanitized = redactLogText(log);
+  assert.ok(!sanitized.includes('db-password'));
+  assert.ok(!sanitized.includes('secret-cookie'));
+  assert.ok(!sanitized.includes('protected-credential'));
+  assert.ok(sanitized.includes('db.internal:5432'));
+});
+
+test('redacts URL-encoded passwords in connection URI userinfo', () => {
+  const log = 'timeout at rediss://worker:%40private%3Fvalue@cache.local:6379';
+  const sanitized = redactLogText(log);
+  assert.ok(!sanitized.includes('%40private%3Fvalue'));
+  assert.ok(sanitized.includes('cache.local:6379'));
+});
