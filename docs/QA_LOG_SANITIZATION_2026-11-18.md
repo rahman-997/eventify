@@ -17,3 +17,11 @@ Work branch: fix/eventify-sensitive-structured-logs-20261118.
 
 ## Existing security audit context
 GitHub Actions on dependency-maintenance PRs show an npm audit failure involving picomatch. A verified fixed version was not available at the time of this patch. Do not disable the audit; investigate only a supported upstream patch once published.
+
+## Follow-up regression — 2026-11-18
+- **Fail-first:** added two tests covering database-URL userinfo (including percent-encoded passwords) and raw `Cookie` / `Proxy-Authorization` header strings; tests failed on the previous sanitizer version.
+- **Fix:** redact URL userinfo and complete sensitive header values in `redactLogText`; also sanitize the logger's top-level `message` field before serialization.
+- **PASS:** `node --experimental-strip-types --test scripts/log-sanitizer.node-test.mjs` — **8/8 tests** on the isolated source/test files (Node 22.16.0).
+- **PASS:** `tsc --strict --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext src/observability/log-sanitizer.ts` (isolated module).
+- **Exact file fidelity:** local Git blob SHA matched GitHub for `src/observability/log-sanitizer.ts` (`33cdf5ca2f05ffc9c6c75eceaeed734d19aed262`) and `scripts/log-sanitizer.node-test.mjs` (`dd14908d47067567872b717de75eb70b795ebc33`).
+- Full Eventify PostgreSQL/Redis/Vitest/build/CI and security audit **not run on this branch**. No paid APIs or production changes.
