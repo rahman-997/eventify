@@ -1,6 +1,7 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
+import { redisHealth } from "../src/redis/client.js";
 
 describe("production operational contract", () => {
   it("serves a lightweight root probe for platform routing checks", async () => {
@@ -27,6 +28,11 @@ describe("production operational contract", () => {
   });
 
   it("reports database, Redis, and background worker readiness independently", async () => {
+    // The Redis client has no offline queue, so a probe made before the connection is up fails.
+    // Wait for the connection like a started service would, instead of racing it.
+    for (let attempt = 0; attempt < 50 && !(await redisHealth()); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
     const response = await request(app).get("/ready").expect(200);
     expect(response.body.status).toBe("ready");
     expect(response.body.database).toBe(true);
