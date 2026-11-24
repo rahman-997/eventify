@@ -8,7 +8,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
 
   if (error instanceof HttpError) {
     if (error.status >= 500) {
-      logger.error("http.error", { method: req.method, route: req.originalUrl, status: error.status, error });
+      logger.error("http.error", { method: req.method, route: req.path, status: error.status, error });
     }
     res.status(error.status).json({ error: error.message, details: error.details, requestId });
     return;
@@ -21,7 +21,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
 
   logger.error("http.unhandled_error", {
     method: req.method,
-    route: req.originalUrl,
+    route: req.path,
     error,
   });
   res.status(500).json({ error: "Internal server error", requestId });
