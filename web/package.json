@@ -8,8 +8,9 @@
     "build": "tsc -b && vite build",
     "bundle:check": "node scripts/check-bundle.mjs",
     "pwa:check": "node scripts/check-pwa.mjs",
-    "verify": "npm run build && npm run bundle:check && npm run pwa:check",
-    "start": "node server.mjs"
+    "verify": "npm run test:pwa && npm run build && npm run bundle:check && npm run pwa:check",
+    "start": "node server.mjs",
+    "test:pwa": "node --test scripts/service-worker.node-test.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",
