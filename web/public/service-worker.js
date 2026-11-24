@@ -1,5 +1,5 @@
-const SHELL_CACHE = "eventify-shell-v3";
-const STATIC_CACHE = "eventify-static-v3";
+const SHELL_CACHE = "eventify-shell-v4";
+const STATIC_CACHE = "eventify-static-v4";
 const MAX_STATIC_CACHE_ENTRIES = 80;
 const SHELL_URLS = [
   "/offline.html",
@@ -56,16 +56,21 @@ async function networkFirstNavigation(request) {
     }
     return response;
   } catch {
-    return (await caches.match("/")) ?? (await caches.match("/offline.html"));
+    const cache = await caches.open(SHELL_CACHE);
+    return (await cache.match("/")) ?? (await cache.match("/offline.html")) ??
+      new Response("Eventify is unavailable offline. Connect and try again.", {
+        status: 503,
+        headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+      });
   }
 }
 
 async function cacheFirstStatic(request) {
-  const cached = await caches.match(request);
+  const cache = await caches.open(STATIC_CACHE);
+  const cached = await cache.match(request);
   if (cached) return cached;
   const response = await fetch(request);
   if (response.ok) {
-    const cache = await caches.open(STATIC_CACHE);
     await cache.put(request, response.clone());
     await trimCache(cache, MAX_STATIC_CACHE_ENTRIES);
   }
