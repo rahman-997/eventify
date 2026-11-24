@@ -1,0 +1,82 @@
+{
+  "name": "eventify",
+  "version": "1.0.0",
+  "description": "A production-oriented event platform with secure booking, waitlists, background jobs, caching, observability, and a React PWA.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "prisma generate && tsc",
+    "start": "node scripts/start-production.mjs",
+    "worker": "node dist/jobs/worker.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:seed-policy": "node --test scripts/demo-seed-policy.node-test.mjs",
+    "arch": "depcruise --config .dependency-cruiser.cjs --exclude '^src/generated' src",
+    "verify": "npm run prisma:generate && npm run typecheck && npm run test:seed-policy && npm test && npm run build && npm run arch",
+    "verify:static": "node scripts/verify-static.mjs",
+    "prisma:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "parallel-bookings": "node scripts/parallel-bookings.ts",
+    "lab:session0": "node labs/session-0/katas.js"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
+    "argon2": "^0.45.1",
+    "bullmq": "^5.81.5",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.3.0",
+    "helmet": "^8.1.0",
+    "ioredis": "^5.7.0",
+    "jose": "^6.2.13",
+    "nodemailer": "^10.2.1",
+    "pg": "^8.23.1",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.19.2",
+    "@types/nodemailer": "^7.0.0",
+    "@types/pg": "^8.15.5",
+    "@types/supertest": "^7.2.1",
+    "dependency-cruiser": "^17.0.0",
+    "prisma": "^7.10.1",
+    "supertest": "^7.3.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2",
+    "vitest": "^5.0.5"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.1",
+    "effect": "3.22.5",
+    "mysql2": "3.24.3",
+    "qs": "6.16.1"
+  },
+  "author": "Abdulrahman Hajar",
+  "homepage": "https://eventify-web.onrender.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rahman-997/eventify.git"
+  },
+  "keywords": [
+    "react",
+    "typescript",
+    "express",
+    "postgresql",
+    "prisma",
+    "redis",
+    "bullmq",
+    "pwa",
+    "event-platform"
+  ]
+}
