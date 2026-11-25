@@ -11,6 +11,7 @@ import { HttpError } from "./errors/http-error.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { requestObservability } from "./middleware/request-observability.js";
 import { renderMetrics } from "./observability/metrics.js";
+import { timedProbe } from "./observability/timed-probe.js";
 import { redisHealth, workerHeartbeatHealth } from "./redis/client.js";
 
 export const app = express();
@@ -52,19 +53,6 @@ app.get("/health", (_req, res) => {
   res.setHeader("cache-control", "no-store");
   res.json({ status: "ok", uptime: Math.round(process.uptime()) });
 });
-
-async function timedProbe(probe: () => Promise<boolean>) {
-  const startedAt = performance.now();
-  try {
-    const ok = await Promise.race([
-      probe(),
-      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 2_500)),
-    ]);
-    return { ok, latencyMs: Number((performance.now() - startedAt).toFixed(2)) };
-  } catch {
-    return { ok: false, latencyMs: Number((performance.now() - startedAt).toFixed(2)) };
-  }
-}
 
 app.get("/ready", async (_req, res) => {
   res.setHeader("cache-control", "no-store");
