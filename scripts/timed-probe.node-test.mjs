@@ -1,29 +1,67 @@
-import assert from "node:assert/strict";
 import test from "node:test";
+import assert from "node:assert/strict";
 import { timedProbe } from "../src/observability/timed-probe.ts";
 
-test("successful and negative probes clear their deadline", async (t) => {
-  const clear = t.mock.method(globalThis, "clearTimeout");
-  for (const ok of [true, false]) {
-    const result = await timedProbe(async () => ok);
-    assert.equal(result.ok, ok);
+function watchTimers(t) {
+  const scheduled = t.mock.method(globalThis, "setTimeout");
+  const cleared = t.mock.method(globalThis, "clearTimeout");
+  return () => {
+    assert.equal(scheduled.mock.callCount(), 1);
+    assert.equal(cleared.mock.callCount(), 1);
+    assert.equal(cleared.mock.calls[0].arguments[0], scheduled.mock.calls[0].result);
+  };
+}
+
+for (const value of [true, false]) {
+  test(`immediate ${value} result clears its deadline`, async (t) => {
+    const assertCleared = watchTimers(t);
+    const result = await timedProbe(async () => value, 100);
+    assert.equal(result.ok, value);
     assert.ok(Number.isFinite(result.latencyMs) && result.latencyMs >= 0);
-  }
-  assert.equal(clear.mock.callCount(), 2);
-  assert.ok(clear.mock.calls.every(({ arguments: args }) => args[0] !== undefined));
+    assertCleared();
+  });
+}
+
+test("rejected probe reports unhealthy and clears its deadline", async (t) => {
+  const assertCleared = watchTimers(t);
+  assert.equal((await timedProbe(async () => { throw new Error("offline"); }, 100)).ok, false);
+  assertCleared();
 });
 
-test("rejected and synchronously throwing probes fail closed and clear their deadline", async (t) => {
-  const clear = t.mock.method(globalThis, "clearTimeout");
-  assert.equal((await timedProbe(async () => { throw new Error("rejected"); })).ok, false);
-  assert.equal((await timedProbe(() => { throw new Error("sync"); })).ok, false);
-  assert.equal(clear.mock.callCount(), 2);
+test("synchronous probe failure reports unhealthy and clears its deadline", async (t) => {
+  const assertCleared = watchTimers(t);
+  assert.equal((await timedProbe(() => { throw new Error("offline"); }, 100)).ok, false);
+  assertCleared();
 });
 
-test("a hung probe returns false when its deadline elapses", async (t) => {
-  const clear = t.mock.method(globalThis, "clearTimeout");
+test("unsettled probe reaches its deadline and reports unhealthy", async (t) => {
+  const assertCleared = watchTimers(t);
   const result = await timedProbe(() => new Promise(() => {}), 10);
   assert.equal(result.ok, false);
-  assert.ok(Number.isFinite(result.latencyMs));
-  assert.equal(clear.mock.callCount(), 1);
+  assertCleared();
+});
+
+test("simultaneous checks do not cancel each other's deadlines", async () => {
+  const result = await Promise.all([
+    timedProbe(async () => true, 100),
+    timedProbe(() => new Promise(() => {}), 10),
+    timedProbe(async () => false, 100),
+  ]);
+  assert.deepEqual(result.map((check) => check.ok), [true, false, false]);
+});
+
+test("a rejection after the deadline is handled", async () => {
+  let rejectProbe;
+  const pending = new Promise((_, reject) => { rejectProbe = reject; });
+  assert.equal((await timedProbe(() => pending, 10)).ok, false);
+  rejectProbe(new Error("late failure"));
+  await new Promise((resolve) => setImmediate(resolve));
+});
+
+test("the production default deadline remains 2500 ms", async (t) => {
+  const scheduled = t.mock.method(globalThis, "setTimeout");
+  const result = await timedProbe(async () => true);
+  assert.equal(result.ok, true);
+  assert.equal(scheduled.mock.callCount(), 1);
+  assert.equal(scheduled.mock.calls[0].arguments[1], 2_500);
 });
