@@ -1,0 +1,52 @@
+name: PWA cache browser QA
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eventify-pwa-browser-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  cache-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run verify
+      - run: npx playwright install --with-deps chromium
+      - name: Verify real service worker in a disposable local browser
+        run: |
+          python3 -m http.server 4192 --bind 127.0.0.1 --directory dist > /tmp/eventify-pwa-preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4192/offline.html >/dev/null; then
+              node scripts/verify-cache-browser.mjs
+              exit $?
+            fi
+            sleep 1
+          done
+          cat /tmp/eventify-pwa-preview.log
+          exit 1
+      - name: Save cache regression results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: eventify-pwa-cache-browser
+          path: web/artifacts/cache-browser/
+          if-no-files-found: ignore
+          retention-days: 7
